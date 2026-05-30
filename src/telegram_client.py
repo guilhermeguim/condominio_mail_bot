@@ -31,3 +31,5 @@ async def get_telegram_file_bytes(file_id: str) -> bytes:
         download_response = await client.get(download_url)
         print(f"Download do arquivo {file_id} concluído. Tamanho: {len(download_response.content)} bytes.")
         return download_response.content
+
+        
