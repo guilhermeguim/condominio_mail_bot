@@ -2,7 +2,7 @@ import os
 import base64
 import httpx
 import msal
-import asyncio
+import textwrap
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -49,13 +49,23 @@ async def send_email_with_attachment(file_bytes: bytes, filename: str) -> None:
     
     attachment_content_b64 = base64.b64encode(file_bytes).decode('utf-8')
     
+    # 1. Isolar o texto multilinha mantendo a indentação do código perfeita
+    email_body = textwrap.dedent("""\
+        Bom dia!!
+
+        Segue em anexo o comprovante de pagamento de condômino do mês. Em nome da proprietária Sonia Guim.
+
+        Guilherme Guim
+        19 98885-1020
+    """)
+    
     # Montar o payload
     payload = {
         "message": {
             "subject": "COMPROVANTE DE PAGAMENTO DE CONDOMÍNIO - Sonia Guim",
             "body": {
                 "contentType": "Text",
-                "content": "Segue em anexo o comprovante de pagamento do condomínio. Obrigado!"
+                "content": email_body
             },
             "toRecipients": [
                 {
