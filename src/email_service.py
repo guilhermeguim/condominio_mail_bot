@@ -65,9 +65,8 @@ async def get_graph_access_token() -> str:
         "Unable to get a Microsoft Graph access token: "
         f"{result.get('error_description', 'No error description was returned.')}"
     )
-    
-    
-    
+
+
 async def send_email_with_attachment(file_bytes: bytes, filename: str) -> None:
     """Send an email with an attachment that already lives in memory.
 
@@ -81,9 +80,16 @@ async def send_email_with_attachment(file_bytes: bytes, filename: str) -> None:
         filename: Name that should appear on the email attachment.
 
     Raises:
-        ValueError: If the Graph access token cannot be obtained.
+        ValueError: If the Graph access token cannot be obtained or if the
+            destination email environment variable is missing.
         httpx.HTTPStatusError: If Microsoft Graph rejects the outbound request.
     """
+    # Read the destination email at call time to ensure no hardcoded values
+    # remain in the codebase and misconfigurations fail fast.
+    destination_email = os.getenv("DESTINATION_EMAIL")
+    if not destination_email:
+        raise ValueError("The DESTINATION_EMAIL environment variable is not set.")
+
     # Every send operation starts by obtaining a fresh bearer token so the
     # request is authorized with current credentials.
     access_token = await get_graph_access_token()
@@ -114,10 +120,10 @@ async def send_email_with_attachment(file_bytes: bytes, filename: str) -> None:
                 "content": email_body
             },
             # Graph always expects a list of recipients, even when the message
-            # is sent to a single mailbox.
+            # is sent to a single mailbox. We use the dynamically loaded env var.
             "toRecipients": [
                 {
-                    "emailAddress": { "address": "gapguim@gmail.com" }
+                    "emailAddress": { "address": destination_email }
                 }
             ],
             # The attachment metadata is sent inline with the message payload.
@@ -145,4 +151,3 @@ async def send_email_with_attachment(file_bytes: bytes, filename: str) -> None:
         # or 5xx response should fail fast so the webhook can surface the error.
         response = await client.post(GRAPH_SEND_MAIL_URL, headers=headers, json=payload)
         response.raise_for_status()
-        
