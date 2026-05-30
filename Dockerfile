@@ -1,24 +1,30 @@
-# 1. Imagem base minimalista do Python 3.11 otimizada para produção
 FROM python:3.11-slim
 
-# 2. Impedir que o Python crie ficheiros .pyc e forçar o output imediato no terminal (vital para lermos os logs no GCP)
+# Keep Python from generating .pyc files inside the container and make logs
+# flush immediately so Cloud Run and local containers show output in real time.
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# 3. Definir o diretório de trabalho dentro do contentor
+# Every subsequent instruction runs from /app, which keeps file copies and the
+# final startup command predictable regardless of the base image defaults.
 WORKDIR /app
 
-# 4. Copiar APENAS o manifesto primeiro (Estratégia de Cache do Docker)
-COPY requirements.txt .
+# Copy the dependency manifest before the application code. That way Docker can
+# reuse the installed dependency layer when only source files change.
+COPY requirements.txt ./
 
-# 5. Instalar dependências sem guardar cache do pip para manter a imagem o mais leve possível
+# Install everything into the image without preserving pip's download cache,
+# which helps keep the final runtime image smaller.
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 6. Copiar a totalidade do código fonte
+# The application itself is small, so copying the entire src directory is enough
+# to make the FastAPI entrypoint and helper modules available at runtime.
 COPY ./src ./src
 
-# 7. Expor a porta 8080 (Porta padrão exigida e mapeada pelo Google Cloud Run)
+# Cloud Run maps incoming traffic to port 8080 by default, so the image makes
+# that contract explicit here.
 EXPOSE 8080
 
-# 8. Comando de arranque do nosso "rececionista" apontando para a porta 8080
+# Uvicorn boots the FastAPI app directly from src.main and listens on all
+# interfaces so the container runtime can reach it.
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080"]
