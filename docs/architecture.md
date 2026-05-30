@@ -8,20 +8,20 @@ The solution is built on top of an event-driven architectural pattern utilizing 
 ### Data Flow (Sequence Diagram)
 ```mermaid
 sequenceDiagram
-    actor User as Telegram User
+    participant User as Telegram User
     participant Telegram
     participant App as FastAPI (Cloud Run)
     participant Graph as MS Graph API
 
     User->>Telegram: Sends PDF receipt
-    Telegram->>App: POST /webhook (JSON Payload)
+    Telegram->>App: POST /webhook payload
     
-    App->>App: Validate schema & PDF extension
+    App->>App: Validate schema and PDF extension
     
     App->>Telegram: Request file stream
     Telegram-->>App: PDF Bytes (Stored purely in RAM)
     
-    App->>Graph: Authenticate & POST /me/sendMail
+    App->>Graph: Authenticate and POST /me/sendMail
     Graph-->>App: 202 Accepted
     
     App-->>Telegram: 200 OK (Acknowledge)
