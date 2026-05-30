@@ -1,35 +1,65 @@
+"""Download Telegram files directly into memory for the email workflow.
+
+The Telegram webhook only provides a ``file_id``. Turning that identifier into
+raw bytes requires two API calls: one to resolve the internal ``file_path`` and
+another to download the file contents from Telegram's file endpoint.
+"""
+
 import os
+
 import httpx
 from dotenv import load_dotenv
-import asyncio
 
 load_dotenv()
 
+TELEGRAM_API_BASE_URL = "https://api.telegram.org"
+
+
 async def get_telegram_file_bytes(file_id: str) -> bytes:
+    """Resolve a Telegram ``file_id`` and return the downloaded file bytes.
+
+    Args:
+        file_id: Telegram's opaque identifier for the document attached to the
+            inbound message.
+
+    Returns:
+        The raw bytes downloaded from Telegram's file API.
+
+    Raises:
+        ValueError: If the bot token is missing or Telegram does not return a
+            usable ``file_path``.
+        httpx.HTTPStatusError: If either Telegram API request fails.
     """
-    Baixa um arquivo do Telegram para a memória RAM a partir do seu file_id.
-    
-    Passos a implementar:
-    1. Resgatar a variável de ambiente TELEGRAM_BOT_TOKEN.
-    2. Construir a URL do método getFile e fazer um GET usando httpx.AsyncClient.
-    3. Extrair o 'file_path' do JSON de resposta.
-    4. Construir a URL final de download e fazer um novo GET.
-    5. Retornar os bytes puros da resposta.
-    """
+    # The bot token is needed for both the metadata lookup and the binary file
+    # download, so fail fast before opening any HTTP client.
     telegram_bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not telegram_bot_token:
-        raise ValueError("A variável de ambiente TELEGRAM_BOT_TOKEN não está definida.")    
-    
-    get_file_url = f"https://api.telegram.org/bot{telegram_bot_token}/getFile?file_id={file_id}"
+        raise ValueError("The TELEGRAM_BOT_TOKEN environment variable is not set.")
     
     async with httpx.AsyncClient() as client:
-        response = await client.get(get_file_url)
-        print(f"Resposta do getFile para file_id {file_id}: {response.json()}")
-        file_path = response.json().get("result").get("file_path")
+        # The first call does not return the file itself. It only resolves the
+        # ``file_id`` into the internal ``file_path`` used by Telegram's file CDN.
+        response = await client.get(
+            f"{TELEGRAM_API_BASE_URL}/bot{telegram_bot_token}/getFile",
+            params={"file_id": file_id},
+        )
+        response.raise_for_status()
+
+        # Telegram nests the actual metadata under ``result``. Using ``get``
+        # with defaults avoids a KeyError and produces a clearer custom message.
+        file_path = response.json().get("result", {}).get("file_path")
+        if not file_path:
+            raise ValueError("Telegram did not return a file path for the requested document.")
         
-        download_url = f"https://api.telegram.org/file/bot{telegram_bot_token}/{file_path}"
+        # The second call targets Telegram's dedicated file endpoint and returns
+        # the raw binary contents that will be forwarded by email.
+        download_url = f"{TELEGRAM_API_BASE_URL}/file/bot{telegram_bot_token}/{file_path}"
         download_response = await client.get(download_url)
-        print(f"Download do arquivo {file_id} concluído. Tamanho: {len(download_response.content)} bytes.")
+        download_response.raise_for_status()
+
+        # Returning bytes keeps the caller free to decide whether to persist,
+        # transform, or forward the file to another service.
         return download_response.content
+
 
         
