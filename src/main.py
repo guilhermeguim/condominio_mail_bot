@@ -9,7 +9,8 @@ status messages back to Telegram when the workflow reaches a known outcome.
 
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -19,6 +20,11 @@ from src.schemas import TelegramUpdateSchema
 from src.telegram_client import get_telegram_file_bytes, send_message
 
 load_dotenv()
+
+try:
+    BRASILIA_TIMEZONE = ZoneInfo("America/Sao_Paulo")
+except ZoneInfoNotFoundError:
+    BRASILIA_TIMEZONE = timezone(timedelta(hours=-3))
 
 app = FastAPI(title="Condominio Mail Bot")
 
@@ -79,7 +85,9 @@ async def telegram_webhook(update: TelegramUpdateSchema) -> dict[str, str]:
 
     # Build the success message only after the email service completes without
     # raising an exception, so the chat feedback reflects the actual outcome.
-    current_time = datetime.now().strftime("%H:%M")
+    # The timestamp is rendered explicitly in Brasilia time so the chat message
+    # does not depend on the container's default timezone.
+    current_time = datetime.now(BRASILIA_TIMEZONE).strftime("%H:%M")
     destination_email = os.getenv("DESTINATION_EMAIL")
     if not destination_email:
         raise ValueError("The DESTINATION_EMAIL environment variable is not set.")
