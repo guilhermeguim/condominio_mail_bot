@@ -50,7 +50,7 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
 ```
 
 ### Initial Production Deploy
-The first deployment requires injecting the environment variables into Cloud Run. Tag, push, and deploy:
+The first deployment requires injecting the environment variables into Cloud Run. We also apply strict FinOps limits (max instances and concurrency) to prevent scale-out billing spikes during unexpected traffic or DDoS attempts.
 ```bash
 docker tag mail-bot-app us-central1-docker.pkg.dev/condominio-mail-bot-prod/mail-bot-repo/mail-bot-app:latest
 docker push us-central1-docker.pkg.dev/condominio-mail-bot-prod/mail-bot-repo/mail-bot-app:latest
@@ -59,7 +59,9 @@ gcloud run deploy mail-bot-service \
   --image=us-central1-docker.pkg.dev/condominio-mail-bot-prod/mail-bot-repo/mail-bot-app:latest \
   --region=us-central1 \
   --allow-unauthenticated \
-  --set-env-vars="TELEGRAM_BOT_TOKEN=YOUR_TOKEN,MICROSOFT_CLIENT_ID=YOUR_ID,MICROSOFT_TENANT_ID=consumers,MICROSOFT_REFRESH_TOKEN=YOUR_REFRESH"
+  --max-instances=1 \
+  --concurrency=10 \
+  --set-env-vars="TELEGRAM_BOT_TOKEN=YOUR_TOKEN,MICROSOFT_CLIENT_ID=YOUR_ID,MICROSOFT_TENANT_ID=consumers,MICROSOFT_REFRESH_TOKEN=YOUR_REFRESH,ALLOWED_CHAT_IDS=YOUR_ID,DESTINATION_EMAIL=YOUR_EMAIL"
 ```
 Once the command finishes, it will return a secure Service URL. You must register this URL in Telegram to point the live webhook to production:
 ```text
@@ -67,7 +69,7 @@ Once the command finishes, it will return a secure Service URL. You must registe
 ```
 
 ## 3. Shipping Code Updates (Maintenance Lifecycle)
-Whenever you modify the source code (e.g., changing the email text, adjusting internal validation structures) and want to deploy the update to production, execute these three commands sequentially in your terminal:
+Whenever you modify the source code and want to deploy the update to production, execute these three commands sequentially in your terminal:
 
 ### Step A: Rebuild the Container
 Recompile the application package locally to incorporate your recent code modifications:
@@ -83,10 +85,24 @@ docker push us-central1-docker.pkg.dev/condominio-mail-bot-prod/mail-bot-repo/ma
 ```
 
 ### Step C: Trigger the Cloud Run Update
-Command Cloud Run to fetch the new image tag and perform a zero-downtime service restart:
+Command Cloud Run to fetch the new image tag and perform a zero-downtime service restart, preserving your previously configured FinOps limits:
 ```bash
 gcloud run deploy mail-bot-service \
   --image=us-central1-docker.pkg.dev/condominio-mail-bot-prod/mail-bot-repo/mail-bot-app:latest \
-  --region=us-central1
+  --region=us-central1 \
+  --max-instances=1 \
+  --concurrency=10
 ```
-Note: You do not need to re-pass the configuration variables (`--set-env-vars`). Cloud Run stores these parameters safely and automatically reuses them across new image deployments unless explicitly instructed to overwrite them.
+Note: You do not need to re-pass the configuration variables (`--set-env-vars`) if they haven't changed. Cloud Run stores these parameters safely and automatically reuses them across new image deployments.
+
+### Adding or Updating Environment Variables
+If your updates introduce a new environment variable or require modifying an existing one, append the `--update-env-vars` flag to your deployment command:
+```bash
+gcloud run deploy mail-bot-service \
+  --image=us-central1-docker.pkg.dev/condominio-mail-bot-prod/mail-bot-repo/mail-bot-app:latest \
+  --region=us-central1 \
+  --max-instances=1 \
+  --concurrency=10 \
+  --update-env-vars="NEW_VARIABLE_NAME=value,ANOTHER_VARIABLE=value"
+```
+Alternatively, environment variables can be managed and updated directly through the Google Cloud Console interface under the Cloud Run service revision settings.

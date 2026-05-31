@@ -15,7 +15,7 @@ A personal automation service designed to intercept Telegram attachments and rou
 ## Project Purpose
 Forwarding payment receipts from chat applications to email involves repetitive manual steps: downloading the file, opening the email client, writing a standard message, attaching the document, and sending it.
 
-This project eliminates this friction. By acting as a webhook listener, it instantly captures PDF documents sent via Telegram and routes them directly to the specified inbox. The execution is purely in-memory, meaning no files are saved to disk, keeping the process fast, stateless, and secure.
+This project eliminates this friction. By acting as a webhook listener, it instantly captures PDF documents sent via Telegram, provides delivery feedback, and routes them directly to the specified inbox. The execution is purely in-memory, meaning no files are saved to disk, keeping the process fast, stateless, and secure.
 
 ## Local Development Quickstart
 
@@ -59,8 +59,10 @@ TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 MICROSOFT_CLIENT_ID=your_azure_client_id_here
 MICROSOFT_TENANT_ID=consumers
 MICROSOFT_REFRESH_TOKEN=your_oauth2_refresh_token_here
+ALLOWED_CHAT_IDS=your_comma_separated_telegram_chat_ids_here
+DESTINATION_EMAIL=your_destination_email_here
 ```
-Note: The `MICROSOFT_TENANT_ID` must be configured as `consumers` to allow authentication via personal Microsoft accounts.
+Note: The `MICROSOFT_TENANT_ID` must be configured as `consumers` to allow authentication via personal Microsoft accounts. `ALLOWED_CHAT_IDS` restricts bot usage strictly to the defined Telegram User IDs, and `DESTINATION_EMAIL` safely isolates the target address from the source code.
 
 ### 6. Local Webhook Tunnelling (Ngrok)
 Telegram webhooks require a public HTTPS URL to reach your local server:
@@ -79,4 +81,4 @@ Launch the local asynchronous ASGI server:
 ```bash
 uvicorn src.main:app --host 0.0.0.0 --port 8080 --reload
 ```
-The endpoint is now live. Sending a PDF to your Telegram bot will trigger the local loop, discharging the email via Microsoft Graph API.
+The endpoint is now live. Sending a PDF to your Telegram bot will trigger the local loop, discharging the email via Microsoft Graph API and responding with a success message in the chat.
