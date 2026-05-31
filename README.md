@@ -61,8 +61,10 @@ MICROSOFT_TENANT_ID=consumers
 MICROSOFT_REFRESH_TOKEN=your_oauth2_refresh_token_here
 ALLOWED_CHAT_IDS=your_comma_separated_telegram_chat_ids_here
 DESTINATION_EMAIL=your_destination_email_here
+EMAIL_SUBJECT="Your email subject here"
+EMAIL_BODY="Your email body here. Use \n for line breaks"
 ```
-Note: The `MICROSOFT_TENANT_ID` must be configured as `consumers` to allow authentication via personal Microsoft accounts. `ALLOWED_CHAT_IDS` restricts bot usage strictly to the defined Telegram User IDs, and `DESTINATION_EMAIL` safely isolates the target address from the source code.
+Note: The `MICROSOFT_TENANT_ID` must be configured as `consumers` to allow authentication via personal Microsoft accounts. `ALLOWED_CHAT_IDS` restricts bot usage strictly to the defined Telegram User IDs. `DESTINATION_EMAIL`, `EMAIL_SUBJECT`, and `EMAIL_BODY` move the outbound email copy into environment configuration, and `EMAIL_BODY` supports literal `\n` sequences for multi-line messages.
 
 ### 6. Local Webhook Tunnelling (Ngrok)
 Telegram webhooks require a public HTTPS URL to reach your local server:

@@ -61,7 +61,7 @@ gcloud run deploy mail-bot-service \
   --allow-unauthenticated \
   --max-instances=1 \
   --concurrency=10 \
-  --set-env-vars="TELEGRAM_BOT_TOKEN=YOUR_TOKEN,MICROSOFT_CLIENT_ID=YOUR_ID,MICROSOFT_TENANT_ID=consumers,MICROSOFT_REFRESH_TOKEN=YOUR_REFRESH,ALLOWED_CHAT_IDS=YOUR_ID,DESTINATION_EMAIL=YOUR_EMAIL"
+  --set-env-vars="TELEGRAM_BOT_TOKEN=YOUR_TOKEN,MICROSOFT_CLIENT_ID=YOUR_ID,MICROSOFT_TENANT_ID=consumers,MICROSOFT_REFRESH_TOKEN=YOUR_REFRESH,ALLOWED_CHAT_IDS=YOUR_ID,DESTINATION_EMAIL=YOUR_EMAIL,EMAIL_SUBJECT=YOUR_SUBJECT,EMAIL_BODY=YOUR_BODY"
 ```
 Once the command finishes, it will return a secure Service URL. You must register this URL in Telegram to point the live webhook to production:
 ```text
