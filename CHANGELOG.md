@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.1.2 - 2026-05-31
+
+### Changed
+
+- Moved the outbound email subject and body from source code into the `EMAIL_SUBJECT` and `EMAIL_BODY` environment variables.
+- Updated the README and operations guide to document the new runtime configuration.
+
+### Fixed
+
+- Converted escaped `\n` sequences from `EMAIL_BODY` into real line breaks before sending the message through Microsoft Graph.
+
 ## v1.1.1 - 2026-05-31
 
 ### Fixed
