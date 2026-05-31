@@ -31,6 +31,14 @@ class DocumentSchema(BaseModel):
         description="MIME type supplied by Telegram for the uploaded document.",
     )
     
+    
+class ChatSchema(BaseModel):
+    """Represent the chat metadata where the message originated."""
+
+    id: int = Field(
+        ...,
+        description="Unique identifier for this chat.",
+    )
 
 class MessageSchema(BaseModel):
     """Represent the message section of the Telegram update.
@@ -38,6 +46,10 @@ class MessageSchema(BaseModel):
     The project only reads the ``document`` field, so the model intentionally
     ignores the many other message attributes Telegram can include.
     """
+    chat: ChatSchema | None = Field(
+        default=None,
+        description="Chat branch containing the chat ID.",
+    )
 
     document: DocumentSchema | None = Field(
         default=None,
