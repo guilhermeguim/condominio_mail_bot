@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.1.1 - 2026-05-31
+
+### Fixed
+
+- Corrected the Telegram success message timestamp to use Brasilia time instead of the container default timezone.
+- Added a safe UTC-3 fallback for environments where IANA timezone data is unavailable.
+
 ## v1.1.0 - 2026-05-31
 
 ### Added
