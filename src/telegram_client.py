@@ -1,14 +1,16 @@
-"""Download Telegram files directly into memory for the email workflow.
+"""Interact with Telegram's Bot API for downloads and chat feedback.
 
-The Telegram webhook only provides a ``file_id``. Turning that identifier into
-raw bytes requires two API calls: one to resolve the internal ``file_path`` and
-another to download the file contents from Telegram's file endpoint.
+This module serves both Telegram-facing responsibilities used by the webhook:
+resolving a ``file_id`` into raw file bytes and sending a plain-text reply back
+to the originating chat. Keeping both operations together avoids duplicating the
+bot token handling and HTTP client setup conventions.
 """
 
 import os
+import logging
+
 import httpx
 from dotenv import load_dotenv
-import logging
 
 load_dotenv()
 
@@ -16,7 +18,7 @@ TELEGRAM_API_BASE_URL = "https://api.telegram.org"
 
 
 async def get_telegram_file_bytes(file_id: str) -> bytes:
-    """Resolve a Telegram ``file_id`` and return the downloaded file bytes.
+    """Resolve a Telegram ``file_id`` and download the corresponding bytes.
 
     Args:
         file_id: Telegram's opaque identifier for the document attached to the
@@ -55,40 +57,40 @@ async def get_telegram_file_bytes(file_id: str) -> bytes:
 
         # Returning bytes keeps the caller free to decide whether to persist, transform, or forward the file to another service.
         return download_response.content
-    
+
 
 async def send_message(chat_id: int, text: str) -> bool:
-    """Send a text message back to a specific Telegram chat.
+    """Send a plain-text feedback message to a Telegram chat.
 
     Args:
         chat_id: The numerical identifier of the target conversation.
-        text: The feedback message to be sent to the user.
+        text: The message body that should be shown to the user in Telegram.
 
     Returns:
-        True if the message was successfully dispatched, False if a network
-        or API error occurred.
+        ``True`` when Telegram accepts the outbound message and ``False`` when a
+        transport or API error prevents the reply from being sent.
 
     Raises:
         ValueError: If the bot token is missing from the environment.
     """
-    # The bot token is required for authorization. We check it early to fail fast before attempting network I/O.
+    # The bot token is required for authorization. Check it before attempting network I/O so configuration errors fail fast and clearly.
     telegram_bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not telegram_bot_token:
         raise ValueError("The TELEGRAM_BOT_TOKEN environment variable is not set.")
-    
+
     send_message_url = f"{TELEGRAM_API_BASE_URL}/bot{telegram_bot_token}/sendMessage"
     message_payload = {"chat_id": chat_id, "text": text}
-    
+
     try:
         async with httpx.AsyncClient() as client:
-            # Dispatch the payload to Telegram. The API expects a JSON body with the chat ID and the message text.
+            # Telegram expects a JSON payload containing both the destination chat identifier and the text that should be rendered to the user.
             response = await client.post(send_message_url, json=message_payload)
             response.raise_for_status()
-            
+
             # Returning True allows the caller to know the delivery succeeded.
             return True
-            
-    except httpx.HTTPError as e:
-        # We catch and log HTTP errors to ensure observability, while returning False so the orchestrator can handle the failure gracefully without crashing.
-        logging.error(f"Failed to send message: {e}")
+
+    except httpx.HTTPError as exc:
+        # Feedback delivery should never crash the whole webhook flow, so the error is logged and the caller receives a simple failure signal.
+        logging.error("Failed to send Telegram message: %s", exc)
         return False

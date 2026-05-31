@@ -1,8 +1,9 @@
-"""Define the subset of Telegram webhook payloads used by the application.
+"""Define the subset of Telegram webhook fields required by the application.
 
-Telegram sends a large and deeply nested JSON structure. These models only keep
-the fields that the webhook handler actually reads, which makes validation more
-focused while still documenting the shape the application depends on.
+Telegram delivers a much larger payload than this project needs. These models
+focus on the small slice of the schema used by the webhook: the originating chat
+identifier for access control and the document metadata required for validation
+and download.
 """
 
 from pydantic import BaseModel, Field
@@ -33,7 +34,11 @@ class DocumentSchema(BaseModel):
     
     
 class ChatSchema(BaseModel):
-    """Represent the chat metadata where the message originated."""
+    """Represent the chat metadata attached to an inbound Telegram message.
+
+    The webhook uses the chat ID as the source of truth for the whitelist check
+    and for routing success or failure notifications back to the same chat.
+    """
 
     id: int = Field(
         ...,
@@ -43,9 +48,14 @@ class ChatSchema(BaseModel):
 class MessageSchema(BaseModel):
     """Represent the message section of the Telegram update.
 
-    The project only reads the ``document`` field, so the model intentionally
-    ignores the many other message attributes Telegram can include.
+    The current webhook relies on two branches of the message payload:
+
+    - ``chat`` to identify who sent the update.
+    - ``document`` to inspect and process the uploaded file.
+
+    The rest of Telegram's message attributes remain intentionally out of scope.
     """
+
     chat: ChatSchema | None = Field(
         default=None,
         description="Chat branch containing the chat ID.",
@@ -61,7 +71,8 @@ class TelegramUpdateSchema(BaseModel):
     """Represent the root webhook payload sent by Telegram.
 
     Telegram may include callback queries, edited messages, and other update
-    types. For this project, the ``message`` branch is the only one required.
+    types. For this project, the ``message`` branch is the only one read by the
+    application runtime.
     """
 
     message: MessageSchema | None = Field(

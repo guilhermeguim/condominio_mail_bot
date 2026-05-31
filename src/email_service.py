@@ -2,8 +2,9 @@
 
 This module isolates everything related to outbound email delivery. The webhook
 handler only needs to provide the file bytes and a filename; this module takes
-care of turning those inputs into the JSON payload expected by Microsoft Graph,
-requesting an access token, and submitting the final API call.
+care of reading the destination mailbox from configuration, building the JSON
+payload expected by Microsoft Graph, requesting an access token, and submitting
+the final API call.
 """
 
 import base64
@@ -79,8 +80,7 @@ async def send_email_with_attachment(file_bytes: bytes, filename: str) -> None:
             destination email environment variable is missing.
         httpx.HTTPStatusError: If Microsoft Graph rejects the outbound request.
     """
-    # Read the destination email at call time to ensure no hardcoded values
-    # remain in the codebase and misconfigurations fail fast.
+    # Read the destination email at call time to ensure no hardcoded values remain in the codebase and misconfigurations fail fast.
     destination_email = os.getenv("DESTINATION_EMAIL")
     if not destination_email:
         raise ValueError("The DESTINATION_EMAIL environment variable is not set.")
