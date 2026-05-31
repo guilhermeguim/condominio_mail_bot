@@ -9,7 +9,6 @@ the final API call.
 
 import base64
 import os
-import textwrap
 
 import httpx
 import msal
@@ -77,7 +76,8 @@ async def send_email_with_attachment(file_bytes: bytes, filename: str) -> None:
 
     Raises:
         ValueError: If the Graph access token cannot be obtained or if the
-            destination email environment variable is missing.
+            destination email, email subject, or email body environment
+            variable is missing.
         httpx.HTTPStatusError: If Microsoft Graph rejects the outbound request.
     """
     # Read the destination email at call time to ensure no hardcoded values remain in the codebase and misconfigurations fail fast.
@@ -91,20 +91,22 @@ async def send_email_with_attachment(file_bytes: bytes, filename: str) -> None:
     # Graph expects binary attachments inside JSON, so the raw bytes must be converted to a base64 string before they can be embedded in the payload.
     attachment_content_b64 = base64.b64encode(file_bytes).decode('utf-8')
     
-    # ``dedent`` keeps the email body readable in source control without leaking Python indentation into the final message text.
-    email_body = textwrap.dedent("""\
-        Bom dia!!
+    email_subject = os.getenv("EMAIL_SUBJECT")
+    if not email_subject:
+        raise ValueError("The EMAIL_SUBJECT environment variable is not set.")
 
-        Segue em anexo o comprovante de pagamento de condômino do mês. Em nome da proprietária Sonia Guim.
-
-        Guilherme Guim
-        19 98885-1020
-    """).strip()
+    email_body_raw = os.getenv("EMAIL_BODY")
+    if not email_body_raw:
+        raise ValueError("The EMAIL_BODY environment variable is not set.")
+    
+    # Convert escaped ``\n`` sequences from environment configuration into
+    # actual line breaks before sending the message body to Outlook.
+    email_body = email_body_raw.replace("\\n", "\n")
     
     # The payload below follows the structure documented for Graph's ``/me/sendMail`` endpoint. Keeping it explicit makes the wire format easy to inspect when the integration needs maintenance.
     payload = {
         "message": {
-            "subject": "COMPROVANTE DE PAGAMENTO DE CONDOMÍNIO - Sonia Guim",
+            "subject": email_subject,
             "body": {
                 "contentType": "Text",
                 "content": email_body
