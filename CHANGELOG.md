@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file.
 
+## v1.1.0 - 2026-05-31
+
+### Added
+
+- Chat whitelist enforcement through the `ALLOWED_CHAT_IDS` environment variable.
+- Telegram chat feedback for success, invalid file submissions, and missing document submissions.
+- `send_message` support in the Telegram client for outbound user notifications.
+- Chat metadata support in the Telegram webhook schemas.
+
+### Changed
+
+- Updated the webhook flow to fail fast for unauthorized chats before any file download work begins.
+- Expanded the README, architecture notes, and operations guide to document the new webhook security behavior and Cloud Run scaling limits.
+- Refreshed inline guidance and docstrings around the webhook, Telegram client, and email delivery flow.
+
+### Fixed
+
+- Reduced unnecessary processing for unauthorized or unsupported webhook requests.
+
 ## v1.0.0 - 2026-05-31
 
 ### Added
